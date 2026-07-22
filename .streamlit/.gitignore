@@ -1,0 +1,14 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment & Secret files (for your Gemini API key later)
+.env
+
+# Streamlit config/cache
+.streamlit/
