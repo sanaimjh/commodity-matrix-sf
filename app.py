@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+from google import genai
+from google.genai import types
 
 # -----------------------------------------------------------------------------
 # 1. Page Configuration & Creative Title
@@ -34,6 +36,40 @@ def load_commodity_data():
         ])
 
 df = load_commodity_data()
+
+DATASET_PATH = "commodity_matrix_dataset.csv"
+GEMINI_MODEL = "gemini-2.5-flash"
+
+
+@st.cache_resource
+def get_gemini_client():
+    return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
+
+@st.cache_data
+def load_csv_system_instruction(path: str = DATASET_PATH) -> str:
+    with open(path, encoding="utf-8") as f:
+        csv_content = f.read()
+    return (
+        "You are the CommodityIQ procurement assistant. Answer questions using "
+        "only the commodity matrix dataset below. When mapping spend, cite the "
+        "relevant GL codes, commodity groups, and financial treatment (CapEx/OpEx). "
+        "If the dataset does not contain the answer, say so clearly.\n\n"
+        f"Commodity matrix dataset (CSV):\n{csv_content}"
+    )
+
+
+def get_gemini_chat():
+    if "gemini_chat" not in st.session_state:
+        client = get_gemini_client()
+        st.session_state.gemini_chat = client.chats.create(
+            model=GEMINI_MODEL,
+            config=types.GenerateContentConfig(
+                system_instruction=load_csv_system_instruction(),
+                temperature=0.2,
+            ),
+        )
+    return st.session_state.gemini_chat
 
 # -----------------------------------------------------------------------------
 # 3. Sidebar: File Upload Section (Invoices / Quotes)
@@ -104,23 +140,21 @@ for message in st.session_state.messages:
 
 # Bottom chat input bar
 if user_prompt := st.chat_input("Ask a question about commodities, GL codes, or uploaded files..."):
-    # Render user message
     st.session_state.messages.append({"role": "user", "content": user_prompt})
     with st.chat_message("user"):
         st.markdown(user_prompt)
 
-    # Bot response logic (Simple lookup response)
     with st.chat_message("assistant"):
-        # Example interaction: simple keyword response or confirmation
-        if "capex" in user_prompt.lower():
-            response = "CapEx items typically represent physical infrastructure like servers, laptops, and leasehold improvements that are capitalized over time."
-        elif "invoice" in user_prompt.lower() or "quote" in user_prompt.lower():
-            if uploaded_files:
-                response = f"I see you have {len(uploaded_files)} file(s) uploaded. Once configured with an LLM or OCR model, I can extract line items and auto-match them to your GL codes!"
-            else:
-                response = "You can upload invoice or quote files using the sidebar uploader on the left!"
-        else:
-            response = f"Received: '{user_prompt}'. You can connect an AI model (like OpenAI or Anthropic) here to automatically query your Pandas dataset in real-time."
-        
+        with st.spinner("Querying CommodityIQ..."):
+            try:
+                chat = get_gemini_chat()
+                gemini_response = chat.send_message(user_prompt)
+                response = gemini_response.text
+            except Exception as exc:
+                response = (
+                    "Sorry, I couldn't reach Gemini right now. "
+                    f"Please verify your API key in `.streamlit/secrets.toml`. ({exc})"
+                )
+
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
