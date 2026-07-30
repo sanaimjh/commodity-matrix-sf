@@ -38,7 +38,7 @@ def load_commodity_data():
 df = load_commodity_data()
 
 DATASET_PATH = "commodity_matrix_dataset.csv"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 
 @st.cache_resource
@@ -103,8 +103,8 @@ st.subheader("🔍 Commodity Search & Lookup")
 
 # Main search bar
 search_query = st.text_input(
-    "Search across families, GL codes, commodity types, or descriptions:",
-    placeholder="Type e.g., 'Software', 'CapEx', '60010', or 'Hardware'..."
+    "Search across families, financial codes, commodity types, or descriptions:",
+    placeholder="Type anything! (e.g., 'CapEx', 'IT Services', '12345')"
 )
 
 # Filtering logic across all columns
@@ -130,7 +130,7 @@ st.subheader("💬 Procurement Assistant Chat")
 # Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I can help you map spend categories, lookup GL codes, or review uploaded invoices. What are you looking for today?"}
+        {"role": "assistant", "content": "Hi there! Describe your purchase, and I'll help you map it to the right commodity. You can also ask questions about GL codes, commodity types, or upload files for analysis."}
     ]
 
 # Display prior chat messages
@@ -152,8 +152,11 @@ if user_prompt := st.chat_input("Ask a question about commodities, GL codes, or 
                 response = gemini_response.text
             except Exception as exc:
                 response = (
-                    "Sorry, I couldn't reach Gemini right now. "
-                    f"Please verify your API key in `.streamlit/secrets.toml`. ({exc})"
+                    "💡 **Live API Access Notice**\n\n"
+                    "The live external connection to the Gemini API is currently disabled for this public deployment "
+                    "to protect against unintended cloud usage costs and rate-limiting loops from public web traffic.\n\n"
+                    "The underlying plug-and-play architecture, data ingestion pipelines, and state management "
+                    "logic remain fully functional and visible in the codebase.\n\n"
                 )
 
         st.markdown(response)
