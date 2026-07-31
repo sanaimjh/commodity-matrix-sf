@@ -117,8 +117,9 @@ if search_query and not df.empty:
     st.caption(f"Showing {len(filtered_df)} matching records out of {len(df)}")
     st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 else:
-    st.caption("Displaying full commodity matrix (Use search bar above to filter):")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    with st.expander("View Full Commodity Matrix"):
+        st.caption("Displaying full commodity matrix (Use search bar above to filter):")
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
 st.divider()
 
